@@ -4,13 +4,13 @@ import re
 import zipfile
 import traceback
 import tkinter as tk
-from tkinter import ttk
 from datetime import datetime, UTC
 from semantic_version import Version
 from pathlib import Path
 
 # EDMC imports
 from config import appname, appversion
+from theme import theme
 
 
 # plugin_name *must* be the plugin's folder name
@@ -27,7 +27,7 @@ if not logger.hasHandlers():
     logger.addHandler(logger_channel)
 
 
-class MessageLabel(ttk.Label):
+class MessageLabel(tk.Label):
     def __init__(self, parent):
         self.__var = tk.StringVar(value="Готов к сбору")
         self.__after_id: str | None = None
@@ -56,10 +56,11 @@ def plugin_start3(plugin_dir: str) -> str:
 
 
 def plugin_app(parent: tk.Frame):
-    frame = ttk.Frame(parent)
-    button = ttk.Button(
+    frame = tk.Frame(parent)
+    button = tk.Button(
         frame,
-        padding=5,
+        padx=5,
+        pady=5,
         text="Собрать логи в ZIP",
         command=collect_logs
     )
@@ -69,6 +70,7 @@ def plugin_app(parent: tk.Frame):
     message_label = MessageLabel(frame)
     message_label.pack()
 
+    theme.update(frame)
     return frame
 
 
