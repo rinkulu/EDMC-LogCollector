@@ -4,6 +4,7 @@ import re
 import zipfile
 import traceback
 import tkinter as tk
+from tkinter import ttk
 from datetime import datetime, UTC
 from semantic_version import Version
 from pathlib import Path
@@ -27,6 +28,14 @@ if not logger.hasHandlers():
     logger.addHandler(logger_channel)
 
 
+plugin_location: Path | None = None
+
+def plugin_start3(plugin_dir: str) -> str:
+    global plugin_location
+    plugin_location = Path(plugin_dir)
+    return plugin_name
+
+
 class MessageLabel(tk.Label):
     def __init__(self, parent):
         self.__var = tk.StringVar(value="Готов к сбору")
@@ -47,38 +56,47 @@ class MessageLabel(tk.Label):
 message_label: MessageLabel | None = None
 
 
-plugin_location: Path | None = None
+class PluginFrame(tk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.grid_columnconfigure(0, weight=1)
 
-def plugin_start3(plugin_dir: str) -> str:
-    global plugin_location
-    plugin_location = Path(plugin_dir)
-    return plugin_name
+        self.button = ttk.Button(
+            self,
+            padding=5,
+            text="Собрать логи в ZIP",
+        )
+        self.black_button = tk.Label(
+            self,
+            padx=5,
+            pady=5,
+            text="Собрать логи в ZIP"
+        )
+
+        self.button.grid(row=0, sticky="NWSE")
+        self.black_button.grid(row=0, sticky="NWSE")
+        theme.register_alternate(
+            (self.button, self.black_button, self.black_button),
+            {"row": 0, "sticky": "NWSE"}
+        )
+        self.button.bind('<Button-1>', collect_logs)
+        theme.button_bind(self.black_button, collect_logs)
+
+        global message_label
+        message_label = MessageLabel(self)
+        message_label.grid(row=1, sticky="NWSE")
+
 
 
 def plugin_app(parent: tk.Frame):
-    frame = tk.Frame(parent)
-    button = tk.Button(
-        frame,
-        padx=5,
-        pady=5,
-        text="Собрать логи в ZIP",
-        command=collect_logs
-    )
-    button.pack(anchor="center")
-
-    global message_label
-    message_label = MessageLabel(frame)
-    message_label.pack()
-
-    theme.update(frame)
-    return frame
+    return PluginFrame(parent)
 
 
 def plugin_stop():
     logger.info("See You, Space Cowboy.")
 
 
-def collect_logs():
+def collect_logs(event):
     global message_label
     message_label.text = "Сбор логов..."
     logger.debug("Collecting log files...")
