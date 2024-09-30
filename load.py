@@ -8,6 +8,7 @@ from tkinter import ttk
 from datetime import datetime, timedelta, UTC
 from semantic_version import Version
 from pathlib import Path
+from tempfile import gettempdir
 
 # EDMC imports
 from config import appname, appversion
@@ -53,8 +54,6 @@ class MessageLabel(tk.Label):
         self.__var.set(text)
         self.__after_id = self.after(30*1000, lambda:self.__var.set("Готов к сбору"))
 
-message_label: MessageLabel | None = None
-
 
 class PluginFrame(tk.Frame):
     def __init__(self, parent):
@@ -79,12 +78,72 @@ class PluginFrame(tk.Frame):
             (self.button, self.black_button, self.black_button),
             {"row": 0, "sticky": "NWSE"}
         )
-        self.button.bind('<Button-1>', collect_logs)
-        theme.button_bind(self.black_button, collect_logs)
+        self.button.bind('<Button-1>', self.collect_logs)
+        theme.button_bind(self.black_button, self.collect_logs)
 
-        global message_label
-        message_label = MessageLabel(self)
-        message_label.grid(row=1, sticky="NWSE")
+        self.message_label = MessageLabel(self)
+        self.message_label.grid(row=1, sticky="NWSE")
+    
+
+    def collect_logs(self, event):
+        self.message_label.text = "Сбор логов..."
+        logger.debug("Collecting log files...")
+
+        try:
+            logs = list()
+            tempdir = Path(gettempdir())
+            now = datetime.now(UTC)
+
+            # Приколюхи от EDMC: в зависимости от версии, appversion может быть либо str,
+            # либо ФУНКЦИЕЙ, возвращающей semantic_version.Version
+            if isinstance(appversion, str):
+                edmc_version = Version(appversion)
+            elif callable(appversion):
+                edmc_version = appversion()
+            else:
+                raise RuntimeError("wtf is this edmc version")
+
+            if edmc_version < Version("5.12.0"):
+                logs.append(tempdir/"EDMarketConnector.log")
+                edmc_logs_dir = tempdir/"EDMarketConnector"       
+            else:
+                # линуксоиды, простите
+                edmc_logs_dir = Path.home()/"AppData"/"Local"/"EDMarketConnector"/"logs"
+            
+            for logfile in (_ for _ in edmc_logs_dir.iterdir() if _.is_file()):
+                edited_at = datetime.fromtimestamp(logfile.stat().st_mtime, tz=UTC)
+                diff = now - edited_at
+                if diff <= timedelta(hours=24):
+                    logs.append(logfile)
+
+            game_logs_dir = Path.home()/"Saved Games"/"Frontier Developments"/"Elite Dangerous"
+            game_logs_pattern = re.compile(r"^Journal\.20\d{2}-\d{2}-\d{2}T\d{6}\.\d{2}\.log$")
+            game_logs = [item for item in game_logs_dir.iterdir() if item.is_file() and re.match(game_logs_pattern, str(item.name)) is not None]
+            for logfile in game_logs:
+                edited_at = datetime.fromtimestamp(logfile.stat().st_mtime, tz=UTC)
+                diff = now - edited_at
+                if diff <= timedelta(hours=24):
+                    logs.append(logfile)
+
+            logger.debug(f"got list of logs: {logs}")
+
+            output_dir = tempdir/"EDMC-LogCollector"
+            output_dir.mkdir(exist_ok=True)
+
+            ouput_zip_path = output_dir/"Triumvirate-logs.zip"
+            with zipfile.ZipFile(ouput_zip_path, 'w') as zip:
+                for file in logs:
+                    name = file.name
+                    zip.write(file, arcname=name)
+            
+            logger.debug("logs collected, opening explorer")
+            self.message_label.text = "Логи собраны"
+
+            os.system(f'explorer /select,\"{ouput_zip_path}\"')
+
+        except:
+            self.message_label.text = "Ошибка при сборе. Напишите @elcylite в Discord."
+            logger.error(traceback.format_exc())
 
 
 
@@ -94,66 +153,3 @@ def plugin_app(parent: tk.Frame):
 
 def plugin_stop():
     logger.info("See You, Space Cowboy.")
-
-
-def collect_logs(event):
-    global message_label
-    message_label.text = "Сбор логов..."
-    logger.debug("Collecting log files...")
-
-    try:
-        logs = list()
-        from tempfile import gettempdir
-        tempdir = Path(gettempdir())
-        now = datetime.now(UTC)
-
-        # Приколюхи от EDMC: в зависимости от версии, appversion может быть либо str,
-        # либо ФУНКЦИЕЙ, возвращающей semantic_version.Version
-        if isinstance(appversion, str):
-            edmc_version = Version(appversion)
-        elif callable(appversion):
-            edmc_version = appversion()
-        else:
-            raise RuntimeError("wtf is this edmc version")
-
-        if edmc_version < Version("5.12.0"):
-            logs.append(tempdir/"EDMarketConnector.log")
-            edmc_logs_dir = tempdir/"EDMarketConnector"       
-        else:
-            # линуксоиды, простите
-            edmc_logs_dir = Path.home()/"AppData"/"Local"/"EDMarketConnector"/"logs"
-        
-        for logfile in (_ for _ in edmc_logs_dir.iterdir() if _.is_file()):
-            edited_at = datetime.fromtimestamp(logfile.stat().st_mtime, tz=UTC)
-            diff = now - edited_at
-            if diff <= timedelta(hours=24):
-                logs.append(logfile)
-
-        game_logs_dir = Path.home()/"Saved Games"/"Frontier Developments"/"Elite Dangerous"
-        game_logs_pattern = re.compile(r"^Journal\.20\d{2}-\d{2}-\d{2}T\d{6}\.\d{2}\.log$")
-        game_logs = [item for item in game_logs_dir.iterdir() if item.is_file() and re.match(game_logs_pattern, str(item.name)) is not None]
-        for logfile in game_logs:
-            edited_at = datetime.fromtimestamp(logfile.stat().st_mtime, tz=UTC)
-            diff = now - edited_at
-            if diff <= timedelta(hours=24):
-                logs.append(logfile)
-
-        logger.debug(f"got list of logs: {logs}")
-
-        output_dir = tempdir/"EDMC-LogCollector"
-        output_dir.mkdir(exist_ok=True)
-
-        ouput_zip_path = output_dir/"Triumvirate-logs.zip"
-        with zipfile.ZipFile(ouput_zip_path, 'w') as zip:
-            for file in logs:
-                name = file.name
-                zip.write(file, arcname=name)
-        
-        logger.debug("logs collected, opening explorer")
-        message_label.text = "Логи собраны"
-
-        os.system(f'explorer /select,\"{ouput_zip_path}\"')
-
-    except:
-        message_label.text = "Ошибка при сборе. Напишите @elcylite в Discord."
-        logger.error(traceback.format_exc())
