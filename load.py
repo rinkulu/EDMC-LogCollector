@@ -5,7 +5,7 @@ import zipfile
 import traceback
 import tkinter as tk
 from tkinter import ttk
-from datetime import datetime, UTC
+from datetime import datetime, timedelta, UTC
 from semantic_version import Version
 from pathlib import Path
 
@@ -105,10 +105,10 @@ def collect_logs(event):
         logs = list()
         from tempfile import gettempdir
         tempdir = Path(gettempdir())
+        now = datetime.now(UTC)
 
         # Приколюхи от EDMC: в зависимости от версии, appversion может быть либо str,
-        # либо ФУНКЦИЕЙ, ВОЗВРАЩАЮЩЕЙ semantic_version.Version
-        # Почему.......
+        # либо ФУНКЦИЕЙ, возвращающей semantic_version.Version
         if isinstance(appversion, str):
             edmc_version = Version(appversion)
         elif callable(appversion):
@@ -118,23 +118,25 @@ def collect_logs(event):
 
         if edmc_version < Version("5.12.0"):
             logs.append(tempdir/"EDMarketConnector.log")
-            debug_logs_dir = tempdir/"EDMarketConnector"
-            logs += [_ for _ in debug_logs_dir.iterdir() if _.is_file()]
+            edmc_logs_dir = tempdir/"EDMarketConnector"       
         else:
             # линуксоиды, простите
             edmc_logs_dir = Path.home()/"AppData"/"Local"/"EDMarketConnector"/"logs"
-            # альтернатива: edmc_logs_dir = (plugin_location / ".." / "..").resolve() / "logs"
-            logs += [_ for _ in edmc_logs_dir.iterdir() if _.is_file()]
+        
+        for logfile in (_ for _ in edmc_logs_dir.iterdir() if _.is_file()):
+            edited_at = datetime.fromtimestamp(logfile.stat().st_mtime, tz=UTC)
+            diff = now - edited_at
+            if diff <= timedelta(hours=24):
+                logs.append(logfile)
 
         game_logs_dir = Path.home()/"Saved Games"/"Frontier Developments"/"Elite Dangerous"
         game_logs_pattern = re.compile(r"^Journal\.20\d{2}-\d{2}-\d{2}T\d{6}\.\d{2}\.log$")
-        game_logs = [item for item in game_logs_dir.iterdir() if item.is_file() and re.match(game_logs_pattern, str(item)) is not None]
-        now = datetime.now(UTC)
-        for path in game_logs:
-            filename = path.name
-            created_at = datetime.fromisoformat(filename[8:filename.find('.', 8)]).replace(tzinfo=UTC)
-            if ((now - created_at).days * 24 + (now - created_at).seconds / 3600) <= 24:
-                logs.append(path)
+        game_logs = [item for item in game_logs_dir.iterdir() if item.is_file() and re.match(game_logs_pattern, str(item.name)) is not None]
+        for logfile in game_logs:
+            edited_at = datetime.fromtimestamp(logfile.stat().st_mtime, tz=UTC)
+            diff = now - edited_at
+            if diff <= timedelta(hours=24):
+                logs.append(logfile)
 
         logger.debug(f"got list of logs: {logs}")
 
