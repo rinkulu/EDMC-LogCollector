@@ -29,12 +29,15 @@ if not logger.hasHandlers():
     logger.addHandler(logger_channel)
 
 
+plugin_version = Version("0.1.0")
 plugin_location: Path | None = None
+
 
 def plugin_start3(plugin_dir: str) -> str:
     global plugin_location
     plugin_location = Path(plugin_dir)
-    return plugin_name
+    logger.debug(f"Version {plugin_version}.")
+    return f"{plugin_name} v{plugin_version}"
 
 
 class MessageLabel(tk.Label):
