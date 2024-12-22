@@ -111,18 +111,15 @@ class PluginFrame(tk.Frame):
                 edmc_logs_dir = Path.home()/"AppData"/"Local"/"EDMarketConnector"/"logs"
             
             for logfile in (_ for _ in edmc_logs_dir.iterdir() if _.is_file()):
-                edited_at = datetime.fromtimestamp(logfile.stat().st_mtime, tz=UTC)
-                diff = now - edited_at
-                if diff <= timedelta(hours=24):
-                    logs.append(logfile)
+                logs.append(logfile)
 
             game_logs_dir = Path.home()/"Saved Games"/"Frontier Developments"/"Elite Dangerous"
             game_logs_pattern = re.compile(r"^Journal\.20\d{2}-\d{2}-\d{2}T\d{6}\.\d{2}\.log$")
-            game_logs = [item for item in game_logs_dir.iterdir() if item.is_file() and re.match(game_logs_pattern, str(item.name)) is not None]
+            game_logs = [item for item in game_logs_dir.iterdir() if item.is_file() and re.match(game_logs_pattern, item.name) is not None]
             for logfile in game_logs:
-                edited_at = datetime.fromtimestamp(logfile.stat().st_mtime, tz=UTC)
-                diff = now - edited_at
-                if diff <= timedelta(hours=24):
+                created_at = datetime.fromisoformat(logfile.name[8:-7]).astimezone()    # making it aware using the local timezone
+                diff = now - created_at
+                if diff <= timedelta(hours=48):
                     logs.append(logfile)
 
             logger.debug(f"got list of logs: {logs}")
