@@ -2,7 +2,6 @@ import logging
 import os
 import re
 import zipfile
-import traceback
 import tkinter as tk
 from tkinter import ttk
 from datetime import datetime, timedelta, UTC
@@ -13,6 +12,12 @@ from tempfile import gettempdir
 # EDMC imports
 from config import appname, appversion
 from theme import theme
+
+
+# localization support
+import l10n
+import functools
+_translate = functools.partial(l10n.translations.tl, context=__file__)
 
 
 # plugin_name *must* be the plugin's folder name
@@ -29,7 +34,7 @@ if not logger.hasHandlers():
     logger.addHandler(logger_channel)
 
 
-plugin_version = Version("0.1.0")
+plugin_version = Version("0.2.0")
 plugin_location: Path | None = None
 
 
@@ -41,8 +46,10 @@ def plugin_start3(plugin_dir: str) -> str:
 
 
 class MessageLabel(tk.Label):
+    DEFAULT_TEXT = _translate("Ready")
+
     def __init__(self, parent):
-        self.__var = tk.StringVar(value="Готов к сбору")
+        self.__var = tk.StringVar(value=self.DEFAULT_TEXT)
         self.__after_id: str | None = None
         super().__init__(parent, textvariable=self.__var)
     
@@ -55,7 +62,7 @@ class MessageLabel(tk.Label):
         if self.__after_id is not None:
             self.after_cancel(self.__after_id)
         self.__var.set(text)
-        self.__after_id = self.after(30*1000, lambda:self.__var.set("Готов к сбору"))
+        self.__after_id = self.after(30*1000, lambda:self.__var.set(self.DEFAULT_TEXT))
 
 
 class PluginFrame(tk.Frame):
@@ -63,16 +70,17 @@ class PluginFrame(tk.Frame):
         super().__init__(parent)
         self.grid_columnconfigure(0, weight=1)
 
+        text = _translate("Collect log files and compress into ZIP")
         self.button = ttk.Button(
             self,
             padding=5,
-            text="Собрать логи в ZIP",
+            text=text
         )
         self.black_button = tk.Label(
             self,
             padx=5,
             pady=5,
-            text="Собрать логи в ZIP"
+            text=text
         )
 
         self.button.grid(row=0, sticky="NWSE")
@@ -89,7 +97,7 @@ class PluginFrame(tk.Frame):
     
 
     def collect_logs(self, event):
-        self.message_label.text = "Сбор логов..."
+        self.message_label.text = _translate("Collecting in process...")
         logger.debug("Collecting log files...")
 
         try:
@@ -97,20 +105,19 @@ class PluginFrame(tk.Frame):
             tempdir = Path(gettempdir())
             now = datetime.now(UTC)
 
-            # Приколюхи от EDMC: в зависимости от версии, appversion может быть либо str,
-            # либо ФУНКЦИЕЙ, возвращающей semantic_version.Version
+            # depending on EDMC version, appversion can be a string or a function returning semantic_version.Version
             if isinstance(appversion, str):
                 edmc_version = Version(appversion)
             elif callable(appversion):
                 edmc_version = appversion()
             else:
-                raise RuntimeError("wtf is this edmc version")
+                raise RuntimeError(f"Couldn't get EDMC version. appversion type: {type(appversion)}")
 
             if edmc_version < Version("5.12.0"):
                 logs.append(tempdir/"EDMarketConnector.log")
                 edmc_logs_dir = tempdir/"EDMarketConnector"       
             else:
-                # линуксоиды, простите
+                # no support for linux yet bc i'm lazy
                 edmc_logs_dir = Path.home()/"AppData"/"Local"/"EDMarketConnector"/"logs"
             
             for logfile in (_ for _ in edmc_logs_dir.iterdir() if _.is_file()):
@@ -137,17 +144,20 @@ class PluginFrame(tk.Frame):
                     zip.write(file, arcname=name)
             
             logger.debug("logs collected, opening explorer")
-            self.message_label.text = "Логи собраны"
+            self.message_label.text = _translate("Success. Opening ZIP location")
 
             os.system(f'explorer /select,\"{ouput_zip_path}\"')
 
-        except:
-            self.message_label.text = "Ошибка при сборе. Напишите @elcylite в Discord."
-            logger.error(traceback.format_exc())
+        except Exception as e:
+            self.message_label.text = _translate("An unexpected error occurred. Please report this issue to @elcylite on Discord.")
+            logger.error("An error during collecting the log files occured.", exc_info=e)
 
 
 
 def plugin_app(parent: tk.Frame):
+    import sys
+    if sys.platform != "win32":
+        return tk.Label("Sorry, EDMC-LogCollector is currently supported only on Windows.")
     return PluginFrame(parent)
 
 

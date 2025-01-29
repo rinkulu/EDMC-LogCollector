@@ -1,0 +1,18 @@
+/* Language name */
+"!Language" = "English";
+
+/* [load.py] */
+"An unexpected error occurred. Please report this issue to @elcylite on Discord." = "An unexpected error occurred. Please report this issue to @elcylite on Discord.";
+
+/* [load.py] */
+"Collect log files and compress into ZIP" = "Collect log files and compress into ZIP";
+
+/* [load.py] */
+"Collecting in process..." = "Collecting in process...";
+
+/* [load.py] */
+"Ready" = "Ready";
+
+/* [load.py] */
+"Success. Opening ZIP location" = "Success. Opening ZIP location";
+

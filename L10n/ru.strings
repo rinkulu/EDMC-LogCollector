@@ -1,0 +1,18 @@
+/* Language name */
+"!Language" = "Russian";
+
+/* [load.py] */
+"An unexpected error occurred. Please report this issue to @elcylite on Discord." = "Произошла неизвестная ошибка. Пожалуйста, сообщите @elcylite в Discord.";
+
+/* [load.py] */
+"Collect log files and compress into ZIP" = "Собрать логи в ZIP";
+
+/* [load.py] */
+"Collecting in process..." = "Сбор логов...";
+
+/* [load.py] */
+"Ready" = "Готов к сбору";
+
+/* [load.py] */
+"Success. Opening ZIP location" = "Успешно. Открываем расположение ZIP";
+
