@@ -27,7 +27,7 @@ if not logger.hasHandlers():
     level = logging.INFO
     logger.setLevel(level)
     logger_channel = logging.StreamHandler()
-    logger_formatter = logging.Formatter(f'%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(lineno)d:%(funcName)s: %(message)s')
+    logger_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(module)s:%(lineno)d:%(funcName)s: %(message)s')
     logger_formatter.default_time_format = '%Y-%m-%d %H:%M:%S'
     logger_formatter.default_msec_format = '%s.%03d'
     logger_channel.setFormatter(logger_formatter)
@@ -52,17 +52,17 @@ class MessageLabel(tk.Label):
         self.__var = tk.StringVar(value=self.DEFAULT_TEXT)
         self.__after_id: str | None = None
         super().__init__(parent, textvariable=self.__var)
-    
+
     @property
     def text(self) -> str:
         return self.__var.get()
-    
+
     @text.setter
     def text(self, text: str):
         if self.__after_id is not None:
             self.after_cancel(self.__after_id)
         self.__var.set(text)
-        self.__after_id = self.after(30*1000, lambda:self.__var.set(self.DEFAULT_TEXT))
+        self.__after_id = self.after(30 * 1000, lambda: self.__var.set(self.DEFAULT_TEXT))
 
 
 class PluginFrame(tk.Frame):
@@ -94,7 +94,7 @@ class PluginFrame(tk.Frame):
 
         self.message_label = MessageLabel(self)
         self.message_label.grid(row=1, sticky="NWSE")
-    
+
 
     def collect_logs(self, event):
         self.message_label.text = _translate("Collecting in process...")
@@ -114,18 +114,21 @@ class PluginFrame(tk.Frame):
                 raise RuntimeError(f"Couldn't get EDMC version. appversion type: {type(appversion)}")
 
             if edmc_version < Version("5.12.0"):
-                logs.append(tempdir/"EDMarketConnector.log")
-                edmc_logs_dir = tempdir/"EDMarketConnector"       
+                logs.append(tempdir / "EDMarketConnector.log")
+                edmc_logs_dir = tempdir / "EDMarketConnector"
             else:
                 # no support for linux yet bc i'm lazy
-                edmc_logs_dir = Path.home()/"AppData"/"Local"/"EDMarketConnector"/"logs"
-            
+                edmc_logs_dir = Path.home() / "AppData" / "Local" / "EDMarketConnector" / "logs"
+
             for logfile in (_ for _ in edmc_logs_dir.iterdir() if _.is_file()):
                 logs.append(logfile)
 
-            game_logs_dir = Path.home()/"Saved Games"/"Frontier Developments"/"Elite Dangerous"
+            game_logs_dir = Path.home() / "Saved Games" / "Frontier Developments" / "Elite Dangerous"
             game_logs_pattern = re.compile(r"^Journal\.20\d{2}-\d{2}-\d{2}T\d{6}\.\d{2}\.log$")
-            game_logs = [item for item in game_logs_dir.iterdir() if item.is_file() and re.match(game_logs_pattern, item.name) is not None]
+            game_logs = [
+                item for item in game_logs_dir.iterdir()
+                if item.is_file() and re.match(game_logs_pattern, item.name) is not None
+            ]
             for logfile in game_logs:
                 created_at = datetime.fromisoformat(logfile.name[8:-7]).astimezone()    # making it aware using the local timezone
                 diff = now - created_at
@@ -134,15 +137,15 @@ class PluginFrame(tk.Frame):
 
             logger.debug(f"got list of logs: {logs}")
 
-            output_dir = tempdir/"EDMC-LogCollector"
+            output_dir = tempdir / "EDMC-LogCollector"
             output_dir.mkdir(exist_ok=True)
 
-            ouput_zip_path = output_dir/"Triumvirate-logs.zip"
+            ouput_zip_path = output_dir / "Triumvirate-logs.zip"
             with zipfile.ZipFile(ouput_zip_path, 'w') as zip:
                 for file in logs:
                     name = file.name
                     zip.write(file, arcname=name)
-            
+
             logger.debug("logs collected, opening explorer")
             self.message_label.text = _translate("Success. Opening ZIP location")
 
