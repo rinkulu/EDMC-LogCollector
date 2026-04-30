@@ -1,6 +1,8 @@
 import logging
 import os
+import platform
 import re
+import subprocess
 import zipfile
 import tkinter as tk
 from tkinter import ttk
@@ -10,14 +12,15 @@ from pathlib import Path
 from tempfile import gettempdir
 
 # EDMC imports
-from config import appname, appversion
-from theme import theme
+from config import appname, appversion  # type: ignore
+from config import config as edmc_config  # type: ignore
+from theme import theme  # type: ignore
 
 
 # localization support
-import l10n
+import l10n  # type: ignore
 import functools
-_translate = functools.partial(l10n.translations.tl, context=__file__)
+_translate = functools.partial(l10n.translations.tl, context=__file__)  # type: ignore
 
 
 # plugin_name *must* be the plugin's folder name
@@ -36,6 +39,7 @@ if not logger.hasHandlers():
 
 plugin_version = Version("0.2.0")
 plugin_location: Path | None = None
+system = platform.system()
 
 
 def plugin_start3(plugin_dir: str) -> str:
@@ -96,7 +100,7 @@ class PluginFrame(tk.Frame):
         self.message_label.grid(row=1, sticky="NWSE")
 
 
-    def collect_logs(self, event):
+    def collect_logs(self, event: tk.Event):
         self.message_label.text = _translate("Collecting in process...")
         logger.debug("Collecting log files...")
 
@@ -105,38 +109,47 @@ class PluginFrame(tk.Frame):
             tempdir = Path(gettempdir())
             now = datetime.now(UTC)
 
+            ### 1: EDMC LOGS
             # depending on EDMC version, appversion can be a string or a function returning semantic_version.Version
             if isinstance(appversion, str):
                 edmc_version = Version(appversion)
             elif callable(appversion):
                 edmc_version = appversion()
             else:
-                raise RuntimeError(f"Couldn't get EDMC version. appversion type: {type(appversion)}")
+                # shouldn't really ever happen
+                self.message_label.text = _translate("Failed to determine EDMC version. Please notify the developer.")
+                raise RuntimeError(f"Failed to determine EDMC version. appversion type: {type(appversion)}")
 
             if edmc_version < Version("5.12.0"):
                 logs.append(tempdir / "EDMarketConnector.log")
                 edmc_logs_dir = tempdir / "EDMarketConnector"
             else:
-                # no support for linux yet bc i'm lazy
-                edmc_logs_dir = Path.home() / "AppData" / "Local" / "EDMarketConnector" / "logs"
+                # the same way EDMC does this in its prefs.py
+                edmc_logs_dir: Path = edmc_config.app_dir_path / "logs"
 
-            for logfile in (_ for _ in edmc_logs_dir.iterdir() if _.is_file()):
-                logs.append(logfile)
+            for entry in edmc_logs_dir.iterdir():
+                if entry.is_file():
+                    logs.append(entry)
 
-            game_logs_dir = Path.home() / "Saved Games" / "Frontier Developments" / "Elite Dangerous"
-            game_logs_pattern = re.compile(r"^Journal\.20\d{2}-\d{2}-\d{2}T\d{6}\.\d{2}\.log$")
-            game_logs = [
-                item for item in game_logs_dir.iterdir()
-                if item.is_file() and re.match(game_logs_pattern, item.name) is not None
+            ### 2: GAME JOURNALS
+            journal_dir = (
+                Path(saved) if (saved := edmc_config.get_str("journaldir"))
+                else Path.home() / "Saved Games" / "Frontier Developments" / "Elite Dangerous"
+            )
+            journal_pattern = re.compile(r"^Journal\.20\d{2}-\d{2}-\d{2}T\d{6}\.\d{2}\.log$")
+            journals = [
+                item for item in journal_dir.iterdir()
+                if item.is_file() and re.match(journal_pattern, item.name) is not None
             ]
-            for logfile in game_logs:
-                created_at = datetime.fromisoformat(logfile.name[8:-7]).astimezone()    # making it aware using the local timezone
+            for journal in journals:
+                created_at = datetime.fromisoformat(journal.name[8:-7]).astimezone()    # making it aware using the local timezone
                 diff = now - created_at
                 if diff <= timedelta(hours=48):
-                    logs.append(logfile)
+                    logs.append(journal)
 
-            logger.debug(f"got list of logs: {logs}")
+            logger.debug(f"Collected files: {', '.join(map(str, logs))}")
 
+            ### 3: ZIP
             output_dir = tempdir / "EDMC-LogCollector"
             output_dir.mkdir(exist_ok=True)
 
@@ -149,18 +162,18 @@ class PluginFrame(tk.Frame):
             logger.debug("logs collected, opening explorer")
             self.message_label.text = _translate("Success. Opening ZIP location")
 
-            os.system(f'explorer /select,\"{ouput_zip_path}\"')
+            match system:
+                case "Windows": os.system(f'explorer /select,\"{ouput_zip_path}\"')
+                case "Darwin": subprocess.Popen(["open", str(output_dir)])
+                case _: subprocess.Popen(["xdg-open", str(output_dir)])
 
         except Exception as e:
             self.message_label.text = _translate("An unexpected error occurred. Please report this issue to @elcylite on Discord.")
-            logger.error("An error during collecting the log files occured.", exc_info=e)
+            logger.error("Unexpected error:", exc_info=e)
 
 
 
 def plugin_app(parent: tk.Frame):
-    import sys
-    if sys.platform != "win32":
-        return tk.Label("Sorry, EDMC-LogCollector is currently supported only on Windows.")
     return PluginFrame(parent)
 
 
