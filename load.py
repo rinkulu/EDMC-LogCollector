@@ -38,6 +38,11 @@ if not logger.hasHandlers():
     logger.addHandler(logger_channel)
 
 
+plugin_version = Version("0.2.0")
+plugin_location: Path | None = None
+system = platform.system()
+
+
 class PluginConfig:
     """A simple wrapper around edmc_config for automatic addition of keys prefix."""
     def set(self, key: str, value: Any):
@@ -62,9 +67,6 @@ class PluginConfig:
         return edmc_config.get_list(f"LogCollector-{key}", default=default)
 
 
-plugin_version = Version("0.2.0")
-plugin_location: Path | None = None
-system = platform.system()
 plugin_config = PluginConfig()
 
 
@@ -105,13 +107,6 @@ class Prefs:
 prefs = Prefs()
 
 
-def plugin_start3(plugin_dir: str) -> str:
-    global plugin_location
-    plugin_location = Path(plugin_dir)
-    logger.debug(f"Version {plugin_version}.")
-    return f"{plugin_name} v{plugin_version}"
-
-
 class MessageLabel(tk.Label):
     DEFAULT_TEXT = _translate("Ready")
 
@@ -132,6 +127,34 @@ class MessageLabel(tk.Label):
         self.__after_id = self.after(30 * 1000, lambda: self.__var.set(self.DEFAULT_TEXT))
 
 
+class DarkCheckbutton(tk.Frame):
+    """
+    Born out of pure hatred towards EDMC theme support.
+    `ttk.Checkbutton`s are not natively supported, just like buttons,
+    so we have to use this messy thing instead.
+    #FIX_YOUR_CODE_EDCD
+    """
+    def __init__(self, parent: tk.Widget, variable: tk.BooleanVar, text: str):
+        super().__init__(parent)
+        self._var = variable
+        self._var.trace_add('write', self.__on_var_change)
+        self.checkbox = tk.Label(self)
+        self.label = tk.Label(self, text=text)
+        self.__on_var_change()  # force checkbox text update
+        theme.button_bind(self.checkbox, self.__on_click)
+        self.checkbox.grid(row=0, column=0)
+        self.label.grid(row=0, column=1)
+
+    def __on_var_change(self, *args):
+        if self._var.get():
+            self.checkbox.configure(text='\u2611')
+        else:
+            self.checkbox.configure(text='\u2610')
+
+    def __on_click(self, event: tk.Event):
+        self._var.set(not self._var.get())
+
+
 class PrefsFrame(tk.Frame):
     def __init__(self, parent: tk.Widget):
         super().__init__(parent)
@@ -143,14 +166,28 @@ class PrefsFrame(tk.Frame):
         self.include_edmc_logs_checkbox = ttk.Checkbutton(
             self, variable=self.include_edmc_logs_var, text=_translate("Include EDMC logs")
         )
+        self.include_edmc_logs_checkbox_dark = DarkCheckbutton(
+            self, variable=self.include_edmc_logs_var, text=_translate("Include EDMC logs")
+        )
+        theme.register_alternate(
+            (self.include_edmc_logs_checkbox, self.include_edmc_logs_checkbox_dark, self.include_edmc_logs_checkbox_dark),
+            {"row": 0, "sticky": "NWS"}
+        )
+
         self.include_journals_checkbox = ttk.Checkbutton(
             self, variable=self.include_journals_var, text=_translate("Include game journals")
         )
+        self.include_journals_checkbox_dark = DarkCheckbutton(
+            self, variable=self.include_journals_var, text=_translate("Include game journals")
+        )
+        theme.register_alternate(
+            (self.include_journals_checkbox, self.include_journals_checkbox_dark, self.include_journals_checkbox_dark),
+            {"row": 1, "sticky": "NWS"}
+        )
+
         self.range_label = tk.Label(self, text=_translate("Range (hours):"))
-        self.range_scale = tk.Scale(self, variable=self.range_var, from_=12, to=120, tickinterval=12, orient=tk.HORIZONTAL)
-        self.include_edmc_logs_checkbox.grid(row=0, sticky="NWS")
-        self.include_journals_checkbox.grid(row=1, sticky="NWS")
         self.range_label.grid(row=2, sticky="NWS")
+        self.range_scale = tk.Scale(self, variable=self.range_var, from_=12, to=120, tickinterval=12, orient=tk.HORIZONTAL)
         self.range_scale.grid(row=3, sticky="NWSE")
 
 
@@ -237,7 +274,7 @@ class PluginFrame(tk.Frame):
         if isinstance(appversion, str):
             edmc_version = Version(appversion)
         elif callable(appversion):
-            edmc_version: Version = appversion()
+            edmc_version: Version = appversion()  # type: ignore
         else:
             # shouldn't really ever happen
             self.message_label.text = _translate("Failed to determine EDMC version. Please report this issue to @elcylite on Discord.")
@@ -293,7 +330,14 @@ class PluginFrame(tk.Frame):
             self.prefs_opened = True
 
 
-def plugin_app(parent: tk.Frame):
+def plugin_start3(plugin_dir: str) -> str:
+    global plugin_location
+    plugin_location = Path(plugin_dir)
+    logger.debug(f"Version {plugin_version}.")
+    return f"{plugin_name} v{plugin_version}"
+
+
+def plugin_app(parent: tk.Widget) -> tk.Frame:
     return PluginFrame(parent)
 
 
