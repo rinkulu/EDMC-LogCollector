@@ -187,7 +187,7 @@ class PluginFrame(tk.Frame):
 
 
     def collect_logs(self, event: tk.Event):
-        self.message_label.text = _translate("Collecting in process...")
+        self.message_label.text = _translate("Collection in process...")
 
         prefs.include_edmc_logs = self.prefs_frame.include_edmc_logs_var.get()
         prefs.include_journals = self.prefs_frame.include_journals_var.get()
@@ -219,7 +219,7 @@ class PluginFrame(tk.Frame):
                     name = file.name
                     zip.write(file, arcname=name)
             logger.debug("Logs are packed, opening explorer")
-            self.message_label.text = _translate("Success. Opening ZIP location")
+            self.message_label.text = _translate("Success. Opening ZIP location.")
             match system:
                 case "Windows": os.system(f'explorer /select,\"{ouput_zip_path}\"')
                 case "Darwin": subprocess.Popen(["open", str(output_dir)])

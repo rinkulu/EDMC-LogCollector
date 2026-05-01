@@ -5,14 +5,29 @@
 "An unexpected error occurred. Please report this issue to @elcylite on Discord." = "Произошла неизвестная ошибка. Пожалуйста, сообщите @elcylite в Discord.";
 
 /* [load.py] */
-"Collect log files and compress into ZIP" = "Собрать логи в ZIP";
+"Collect and pack logs" = "Собрать и упаковать логи";
 
 /* [load.py] */
-"Collecting in process..." = "Сбор логов...";
+"Failed to determine EDMC version. Please report this issue to @elcylite on Discord." = "Не удалось определить версию EDMC. Пожалуйста, сообщите @elcylite в Discord.";
+
+/* [load.py] */
+"Include EDMC logs" = "Собрать логи EDMC";
+
+/* [load.py] */
+"Include game journals" = "Собрать журналы игры";
+
+/* [load.py] */
+"No suitable files found. Try changing the settings." = "Подходящих файлов не найдено. Попробуйте изменить настройки.";
+
+/* [load.py] */
+"Range (hours):" = "Диапазон (часов):";
+
+/* [load.py] */
+"Collection in process..." = "Сбор логов...";
 
 /* [load.py] */
 "Ready" = "Готов к сбору";
 
 /* [load.py] */
-"Success. Opening ZIP location" = "Успешно. Открываем расположение ZIP";
+"Success. Opening ZIP location." = "Успешно. Открываем расположение ZIP.";
 
