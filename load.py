@@ -46,7 +46,7 @@ if not logger.hasHandlers():
     logger.addHandler(logger_channel)
 
 
-plugin_version = Version("0.2.0")
+plugin_version = Version("0.3.0")
 plugin_location: Path | None = None
 system = platform.system()
 
