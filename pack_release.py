@@ -1,7 +1,7 @@
 import zipfile
 from datetime import datetime, UTC
 
-files = ['load.py', 'L10n/en.strings', 'L10n/ru.strings']
+files = ['load.py', 'L10n/en.strings', 'L10n/ru.strings', "LICENSE"]
 now = datetime.now(UTC)
 fixed_datetime = (now.year, now.month, now.day, now.hour, now.minute, now.second)
 

@@ -1,3 +1,5 @@
+# Copyright (c) 2024-2026 rinkulu <rinkulukat@gmail.com>. Licensed under the GPLv3. See LICENSE file.
+
 import logging
 import os
 import platform
