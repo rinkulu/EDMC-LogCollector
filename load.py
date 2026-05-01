@@ -2,6 +2,7 @@ import logging
 import os
 import platform
 import re
+import requests
 import subprocess
 import zipfile
 import tkinter as tk
@@ -10,12 +11,14 @@ from datetime import datetime, timedelta, UTC
 from semantic_version import Version
 from pathlib import Path
 from tempfile import gettempdir
+from threading import Thread
 from typing import Any
 
 # EDMC imports
 from config import appname, appversion  # type: ignore
 from config import config as edmc_config  # type: ignore
 from theme import theme  # type: ignore
+from ttkHyperlinkLabel import HyperlinkLabel  # type: ignore
 
 
 # localization support
@@ -221,6 +224,10 @@ class PluginFrame(tk.Frame):
         theme.button_bind(self.open_prefs_button_dark, self.change_prefs_visability)
 
         self.prefs_frame = PrefsFrame(self)
+        # we don't need to map it now, this will be done on `open_prefs_button` click
+
+        self.update_label: HyperlinkLabel
+        Thread(name="EDMC LogCollector updater", target=self.__check_updates).start()
 
 
     def collect_logs(self, event: tk.Event):
@@ -328,6 +335,30 @@ class PluginFrame(tk.Frame):
             self.open_prefs_button_dark.configure(text='\u25b2')
             self.prefs_frame.grid(row=2, column=0, columnspan=2, sticky="NWSE")
             self.prefs_opened = True
+
+
+    def __check_updates(self):
+        def show_label(url: str):
+            self.update_label = HyperlinkLabel(
+                master=self,
+                text=_translate("Update available: {ver}").format(ver=str(latest_version)),
+                url=resp.json()["html_url"],
+            )
+            theme.update(self.update_label)
+            self.update_label.grid(row=3, column=0, columnspan=2, sticky="NWSE")
+
+        try:
+            resp = requests.get("https://api.github.com/repos/rinkulu/EDMC-LogCollector/releases/latest")
+            resp.raise_for_status()
+        except Exception as e:
+            logger.error("Failed to check for updates:", exc_info=e)
+            return
+        latest_version = Version(resp.json()["tag_name"])
+        if latest_version == plugin_version:
+            logger.debug("Running the latest version.")
+        else:
+            logger.info(f"Found available update: {plugin_version} -> {latest_version}")
+            self.after_idle(show_label, resp.json()["html_url"])
 
 
 def plugin_start3(plugin_dir: str) -> str:

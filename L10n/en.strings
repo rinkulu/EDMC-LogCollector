@@ -11,6 +11,9 @@
 "Failed to determine EDMC version. Please report this issue to @elcylite on Discord." = "Failed to determine EDMC version. Please report this issue to @elcylite on Discord.";
 
 /* [load.py] */
+"Update available: {ver}" = "Update available: {ver}";
+
+/* [load.py] */
 "Include EDMC logs" = "Include EDMC logs";
 
 /* [load.py] */
