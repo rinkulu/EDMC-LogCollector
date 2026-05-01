@@ -7,7 +7,7 @@ import subprocess
 import zipfile
 import tkinter as tk
 from tkinter import ttk
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta
 from semantic_version import Version
 from pathlib import Path
 from tempfile import gettempdir
@@ -25,6 +25,11 @@ from ttkHyperlinkLabel import HyperlinkLabel  # type: ignore
 import l10n  # type: ignore
 import functools
 _translate = functools.partial(l10n.translations.tl, context=__file__)  # type: ignore
+
+
+# for python 3.9 compatibility - instead of `from datetime import UTC`
+from datetime import timezone  # noqa: E402
+UTC = timezone.utc
 
 
 # plugin_name *must* be the plugin's folder name
@@ -264,10 +269,12 @@ class PluginFrame(tk.Frame):
                     zip.write(file, arcname=name)
             logger.debug("Logs are packed, opening explorer")
             self.message_label.text = _translate("Success. Opening ZIP location.")
-            match system:
-                case "Windows": os.system(f'explorer /select,\"{ouput_zip_path}\"')
-                case "Darwin": subprocess.Popen(["open", str(output_dir)])
-                case _: subprocess.Popen(["xdg-open", str(output_dir)])
+            if system == "Windows":
+                os.system(f'explorer /select,\"{ouput_zip_path}\"')
+            elif system == "Darwin":
+                subprocess.Popen(["open", str(output_dir)])
+            else:
+                subprocess.Popen(["xdg-open", str(output_dir)])
 
         except Exception as e:
             self.message_label.text = _translate("An unexpected error occurred. Please report this issue to @elcylite on Discord.")
@@ -306,8 +313,9 @@ class PluginFrame(tk.Frame):
 
     def _collect_journals(self):
         now = datetime.now(UTC)
+        config_journaldir = edmc_config.get_str("journaldir")
         journal_dir = (
-            Path(saved) if (saved := edmc_config.get_str("journaldir"))
+            Path(config_journaldir) if config_journaldir
             else Path.home() / "Saved Games" / "Frontier Developments" / "Elite Dangerous"
         )
         journal_pattern = re.compile(r"^Journal\.20\d{2}-\d{2}-\d{2}T\d{6}\.\d{2}\.log$")
