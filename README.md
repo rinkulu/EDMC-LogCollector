@@ -21,7 +21,7 @@ A plugin for quickly collecting fresh EDMC logs and game journals, intended prim
 
 **The plugin is compatible with EDMC versions 5.0 and higher.**
 
-The plugin code itself is suitable for Python 3.6 and higher, which offers the potential to improve compatibility down to EDMC 4.0. However, this would require removing the `semantic-version` dependency (EDMC provides this module starting from version 5.0), which is technically possible but doesn't seem necessary to me at this stage.
+The code aims to be suitable for Python 3.7 and higher, which offers the potential to improve compatibility down to EDMC 4.0. However, this would require removing the `semantic-version` dependency (EDMC provides this module starting from version 5.0), which is technically possible but doesn't seem necessary to me at this stage.
 
 ---
 
