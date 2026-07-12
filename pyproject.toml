@@ -1,0 +1,39 @@
+[project]
+name = "edmc-logcollector"
+version = "0.3.1"
+description = "An EDMC plugin for quickly collecting fresh game and EDMC logs for debugging purposes."
+readme = "README.md"
+license = "GPL-3.0-only"
+license-files = [ "LICENSE" ]
+authors = [ { name = "rinkulu", email = "rinkulukat@gmail.com" } ]
+requires-python = ">=3.7"
+classifiers = [
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+  "requests>=2.31",
+  "semantic-version>=2.10",
+]
+
+[dependency-groups]
+dev = [
+  "ruff",
+]
+
+[tool.ruff]
+line-length = 135
+exclude = [
+  ".git",
+  ".venv",
+  "__pycache__",
+  "L10n",
+]
+lint.select = [ "C90", "E", "F", "W" ]
