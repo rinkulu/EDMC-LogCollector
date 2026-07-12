@@ -1,8 +1,8 @@
 import zipfile
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 
 files = ['load.py', 'L10n/en.strings', 'L10n/ru.strings', "LICENSE"]
-now = datetime.now(UTC)
+now = datetime.now(timezone.utc)
 fixed_datetime = (now.year, now.month, now.day, now.hour, now.minute, now.second)
 
 with zipfile.ZipFile('EDMC-LogCollector.zip', 'w', compression=zipfile.ZIP_DEFLATED) as zf:
